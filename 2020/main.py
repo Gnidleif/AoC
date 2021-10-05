@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 from typing import Generator
 from base_day import BaseDay
+import time
 import re
 
 class Challenge:
@@ -11,11 +12,23 @@ class Challenge:
             Day3(),
             Day4(),
             Day5(),
+            Day6(),
         ]
+        self.total_ms = 0
+
+    def timedCall(self, callback) -> tuple():
+        tick = time.perf_counter() * 1000
+        retVal = callback()
+        tock = time.perf_counter() * 1000
+
+        return (retVal, f"{tock-tick:.3f}")
 
     def run(self) -> Generator[str, None, None]:
         for d in self.days:
-            yield f"{d.name} -> part1({d.part1()}) : part2({d.part2()})"
+            res1, time1 = self.timedCall(d.part1)
+            res2, time2 = self.timedCall(d.part2)
+            self.total_ms += time1 + time2
+            yield f"{d.name}: part1[{time1}ms]({res1}) | part2[{time2}ms]({res2})"
 
 def run(_: list()) -> bool:
     for y in Challenge().run():
@@ -23,44 +36,84 @@ def run(_: list()) -> bool:
 
     return False
 
+class Day6(BaseDay):
+    def __init__(self):
+        super(Day6, self).__init__(day_number=6)
+        self.groups = (" ".join(self.input)).split("  ")
+
+    def part1(self) -> int:
+        return sum([len(set(line.replace(" ", ""))) for line in self.groups])
+
+    def part2(self) -> int:
+        count = 0
+        for line in self.groups:
+            num_people = len(line.split(" "))
+            letters = set(line.replace(" ", ""))
+            for chr in letters:
+                ans_count = line.count(chr)
+                if ans_count == num_people:
+                    count += 1
+
+        return count
+
 class Day5(BaseDay):
     def __init__(self):
         super(Day5, self).__init__(day_number=5)
+        self.codes = [(["0" if y == "F" else "1" for y in x[:7]], ["0" if y == "L" else "1" for y in x[7:]]) for x in self.input]
+
+    def part1(self) -> int:
+        def iterate_code(line, upper):
+            lower = 0
+            for code in line:
+                split = round((upper - lower) / 2)
+                if code == "1":
+                    lower += split
+                else:
+                    upper -= split
+            return upper if line[-1] == "1" else lower
+
+        seat_ids = []
+        for line in self.codes:
+            row = iterate_code(line[0], 127)
+            col = iterate_code(line[1], 7)
+            seat_ids.append((row * 8) + col)
+
+        return max(seat_ids)
 
 class Day4(BaseDay):
     def __init__(self):
         super(Day4, self).__init__(day_number=4)
-        self.info = (" ".join(self.input)).split("  ")
+        self.lines = (" ".join(self.input)).split("  ")
 
     def part1(self) -> int:
         count = 0
         rgx = re.compile(r"byr|iyr|eyr|hgt|hcl|ecl|pid|cid")
-        for line in self.info:
+        for line in self.lines:
             result = re.findall(rgx, line)
             if len(result) == 8 or (len(result) == 7 and "cid" not in result):
                 count += 1
         return count
 
     def part2(self) -> int:
-        eyes_rgx = re.compile(r"amb|blu|brn|gry|grn|hzl|oth")
+        ecls_rgx = re.compile(r"amb|blu|brn|gry|grn|hzl|oth")
         main_rgx = re.compile(r"(byr:\d{4})|(iyr:\d{4})|(eyr:\d{4})|(hgt:[\w\d]+)|(hcl:#[a-f\d]{6})|(ecl:\w{3})|(pid:\b\d{9}\b)|(cid)")
-        rgx_chkd = set(["hcl", "pid", "cid"])
+        excluded = set(["hcl", "pid", "cid"])
         validate = {
             "byr": lambda x: 1920 <= int(x) <= 2002,
             "iyr": lambda x: 2010 <= int(x) <= 2020,
             "eyr": lambda x: 2020 <= int(x) <= 2030,
             "hgt": lambda x: len(x[:-2]) > 0 and ((59 <= int(x[:-2]) <= 76 and x[-2:] == "in") or (150 <= int(x[:-2]) <= 193 and x[-2:] == "cm")),
-            "ecl": lambda x: eyes_rgx.match(x),
+            "ecl": lambda x: ecls_rgx.match(x),
         }
         count = 0
-        for line in self.info:
+        for line in self.lines:
             info = ["".join(x) for x in re.findall(main_rgx, line)]
             valid = set()
             for subs in info:
                 key, val = subs[:3], subs[4:]
                 if key in valid:
                     break
-                if key not in rgx_chkd and (not (len(val) > 0 and validate[key](val))):
+                if key not in excluded and not (len(val) > 0 and validate[key](val)):
                     break
                 valid.add(key)
             if len(valid) == 8 or (len(valid) == 7 and "cid" not in valid):
