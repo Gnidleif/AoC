@@ -4,6 +4,7 @@ from base_day import BaseDay
 import time
 import re
 
+
 class Challenge:
     def __init__(self):
         self.days = [
@@ -27,18 +28,13 @@ class Challenge:
         for d in self.days:
             res1, time1 = self.timedCall(d.part1)
             res2, time2 = self.timedCall(d.part2)
-            self.total_ms += time1 + time2
+            self.total_ms += float(time1) + float(time2)
             yield f"{d.name}: part1[{time1}ms]({res1}) | part2[{time2}ms]({res2})"
 
-def run(_: list()) -> bool:
-    for y in Challenge().run():
-        print(y)
-
-    return False
 
 class Day6(BaseDay):
-    def __init__(self):
-        super(Day6, self).__init__(day_number=6)
+    def __init__(self, read_file=True):
+        super(Day6, self).__init__(day_number=6, read_file=read_file)
         self.groups = (" ".join(self.input)).split("  ")
 
     def part1(self) -> int:
@@ -56,33 +52,38 @@ class Day6(BaseDay):
 
         return count
 
+
 class Day5(BaseDay):
-    def __init__(self):
-        super(Day5, self).__init__(day_number=5)
-        self.codes = [(["0" if y == "F" else "1" for y in x[:7]], ["0" if y == "L" else "1" for y in x[7:]]) for x in self.input]
+    def __init__(self, read_file=True):
+        super(Day5, self).__init__(day_number=5, read_file=read_file)
+        self.binary = ["".join(["0" if char in ["F", "L"]
+                                else "1" for char in line]) for line in self.input]
+
+    def get_seat_id(self, code):
+        row = int(code[:7], 2)
+        col = int(code[7:], 2)
+        return (8 * row) + col
 
     def part1(self) -> int:
-        def iterate_code(line, upper):
-            lower = 0
-            for code in line:
-                split = round((upper - lower) / 2)
-                if code == "1":
-                    lower += split
-                else:
-                    upper -= split
-            return upper if line[-1] == "1" else lower
+        top = 0
+        for code in self.binary:
+            seat_id = self.get_seat_id(code)
+            if seat_id > top:
+                top = seat_id
+        return top
 
-        seat_ids = []
-        for line in self.codes:
-            row = iterate_code(line[0], 127)
-            col = iterate_code(line[1], 7)
-            seat_ids.append((row * 8) + col)
+    def part2(self):
+        last_seat = 0
+        for code in sorted(self.binary):
+            seat_id = self.get_seat_id(code)
+            if last_seat > 0 and seat_id != (last_seat + 1):
+                return seat_id - 1
+            last_seat = seat_id
 
-        return max(seat_ids)
 
 class Day4(BaseDay):
-    def __init__(self):
-        super(Day4, self).__init__(day_number=4)
+    def __init__(self, read_file=True):
+        super(Day4, self).__init__(day_number=4, read_file=read_file)
         self.lines = (" ".join(self.input)).split("  ")
 
     def part1(self) -> int:
@@ -96,7 +97,8 @@ class Day4(BaseDay):
 
     def part2(self) -> int:
         ecls_rgx = re.compile(r"amb|blu|brn|gry|grn|hzl|oth")
-        main_rgx = re.compile(r"(byr:\d{4})|(iyr:\d{4})|(eyr:\d{4})|(hgt:[\w\d]+)|(hcl:#[a-f\d]{6})|(ecl:\w{3})|(pid:\b\d{9}\b)|(cid)")
+        main_rgx = re.compile(
+            r"(byr:\d{4})|(iyr:\d{4})|(eyr:\d{4})|(hgt:[\w\d]+)|(hcl:#[a-f\d]{6})|(ecl:\w{3})|(pid:\b\d{9}\b)|(cid)")
         excluded = set(["hcl", "pid", "cid"])
         validate = {
             "byr": lambda x: 1920 <= int(x) <= 2002,
@@ -120,9 +122,10 @@ class Day4(BaseDay):
                 count += 1
         return count
 
+
 class Day3(BaseDay):
-    def __init__(self):
-        super(Day3, self).__init__(day_number=3)
+    def __init__(self, read_file=True):
+        super(Day3, self).__init__(day_number=3, read_file=read_file)
         self.height = len(self.input)
         self.width = len(self.input[0])
 
@@ -138,10 +141,12 @@ class Day3(BaseDay):
     def part2(self) -> int:
         return self.part1(1, 1) * self.part1() * self.part1(5, 1) * self.part1(7, 1) * self.part1(1, 2)
 
+
 class Day2(BaseDay):
-    def __init__(self):
-        super(Day2, self).__init__(day_number=2)
-        rgx = re.compile(r"^(\d+)-(\d+)\s(\w):\s(\w+)$", flags=re.MULTILINE|re.IGNORECASE)
+    def __init__(self, read_file=True):
+        super(Day2, self).__init__(day_number=2, read_file=read_file)
+        rgx = re.compile(r"^(\d+)-(\d+)\s(\w):\s(\w+)$",
+                         flags=re.MULTILINE | re.IGNORECASE)
         self.lines = [rgx.split(x)[1:-1] for x in self.input]
 
     def part1(self) -> int:
@@ -168,9 +173,10 @@ class Day2(BaseDay):
                 result += 1
         return result
 
+
 class Day1(BaseDay):
-    def __init__(self):
-        super(Day1, self).__init__(day_number=1)
+    def __init__(self, read_file=True):
+        super(Day1, self).__init__(day_number=1, read_file=read_file)
         self.nums = [int(x) for x in self.input]
         self.set_nums = set(self.nums)
 
@@ -184,6 +190,16 @@ class Day1(BaseDay):
             for num2 in self.nums:
                 if (2020 - num - num2) in self.set_nums:
                     return num * (2020 - num - num2) * num2
+
+
+def run(_: list()) -> bool:
+    c = Challenge()
+    for y in c.run():
+        print(y)
+    print(f"run done! total time: {c.total_ms:.3f}ms")
+
+    return False
+
 
 if __name__ == "__main__":
     import sys

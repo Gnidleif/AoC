@@ -1,11 +1,16 @@
 #!/usr/bin/python3
+from math import fabs
 import os
-__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+__location__ = os.path.realpath(os.path.join(
+    os.getcwd(), os.path.dirname(__file__)))
+
 
 class BaseDay:
-    def __init__(self, day_number: int):
+    def __init__(self, day_number: int, read_file: bool):
+        self.input = []
         self.name = f"day{day_number}"
-        self.input = self.read_input()
+        if read_file == True:
+            self.input = self.read_input()
 
     def read_input(self):
         file_name = f"{self.name}.txt"
