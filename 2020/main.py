@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+from os import read
+from sys import flags
 from typing import Generator
 from base_day import BaseDay
 import time
@@ -14,6 +16,8 @@ class Challenge:
             Day4(),
             Day5(),
             Day6(),
+            Day7(),
+            Day8(),
         ]
         self.total_ms = 0
 
@@ -30,6 +34,74 @@ class Challenge:
             res2, time2 = self.timedCall(d.part2)
             self.total_ms += float(time1) + float(time2)
             yield f"{d.name}: part1[{time1}ms]({res1}) | part2[{time2}ms]({res2})"
+
+
+class Day8(BaseDay):
+    def __init__(self, read_file=True):
+        super(Day8, self).__init__(day_number=8, read_file=read_file)
+        self.code = [dict(zip(["cmd", "val"], line.split(' ')))
+                     for line in self.input]
+
+    def part1(self):
+        visited = set()
+        i, acc = 0, 0
+        while i not in visited:
+            visited.add(i)
+            cmd = self.code[i]["cmd"]
+            val = int(self.code[i]["val"])
+            i += val if cmd == "jmp" else 1
+            if cmd == "acc":
+                acc += val
+
+        return acc
+
+
+class Day7(BaseDay):
+    def __init__(self, read_file=True):
+        super(Day7, self).__init__(day_number=7, read_file=read_file)
+        key_rgx = re.compile(r"[a-z]+\s[a-z]+")
+        val_rgx = re.compile(r"(\d+)\s([a-z]+\s[a-z]+)")
+        self.bag_map = {}
+        for line in self.input:
+            key = key_rgx.match(line).group(0)
+            self.bag_map[key] = [{"amount": int(m[0]), "color": m[1]}
+                                 for m in val_rgx.findall(line)]
+        self.my_bag = "shiny gold"
+
+    def contains_one(self, key) -> bool:
+        if len(self.bag_map[key]) == 0:
+            return False
+        colors = [line["color"] for line in self.bag_map[key]]
+        if len(colors) == 0:
+            return False
+        if self.my_bag in colors:
+            return True
+        for color in colors:
+            if self.contains_one(color):
+                return True
+        return False
+
+    def part1(self) -> int:
+        count = 0
+        for key in self.bag_map:
+            if self.contains_one(key):
+                count += 1
+        return count
+
+    def count_bags(self, key) -> int:
+        count = 0
+        if len(self.bag_map[key]) == 0:
+            return count
+
+        for bag in self.bag_map[key]:
+            count += bag["amount"] + \
+                self.count_bags(bag["color"]) * bag["amount"]
+
+        return count
+
+    def part2(self) -> int:
+        count = self.count_bags(self.my_bag)
+        return count
 
 
 class Day6(BaseDay):
@@ -57,10 +129,10 @@ class Day5(BaseDay):
     def __init__(self, read_file=True):
         super(Day5, self).__init__(day_number=5, read_file=read_file)
         self.binary = ["".join(["0" if char in ["F", "L"]
-                                else "1" for char in line]) for line in self.input]
+                               else "1" for char in line]) for line in self.input]
 
     def get_seat_id(self, code):
-        row = int(code[:7], 2)
+        row = int(code[: 7], 2)
         col = int(code[7:], 2)
         return (8 * row) + col
 
