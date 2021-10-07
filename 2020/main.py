@@ -5,6 +5,7 @@ from typing import Generator
 from base_day import BaseDay
 import time
 import re
+from copy import deepcopy
 
 
 class Challenge:
@@ -54,6 +55,32 @@ class Day8(BaseDay):
                 acc += val
 
         return acc
+
+    def part2(self):
+        original = [node.copy() for node in self.code]
+        for i in range(len(self.code)):
+            cmd = self.code[i]["cmd"]
+            if cmd == "acc":
+                continue
+
+            self.code[i]["cmd"] = "jmp" if cmd == "nop" else "nop"
+            is_infinite = False
+            visited = set()
+            idx, acc = 0, 0
+            while idx < len(self.code):
+                if idx in visited:
+                    is_infinite = True
+                    break
+                visited.add(idx)
+                cmd = self.code[idx]["cmd"]
+                val = int(self.code[idx]["val"])
+                idx += val if cmd == "jmp" else 1
+                if cmd == "acc":
+                    acc += val
+            if not is_infinite:
+                return acc
+            self.code = [node.copy() for node in original]
+        return 0
 
 
 class Day7(BaseDay):
