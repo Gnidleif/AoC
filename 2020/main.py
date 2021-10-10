@@ -1,15 +1,37 @@
 #!/usr/bin/python3
-from os import read
-from sys import flags
+import os
 from typing import Generator
 from base_day import BaseDay
 import time
 import re
-from copy import deepcopy
+import csv
+__location__ = os.path.realpath(os.path.join(
+    os.getcwd(), os.path.dirname(__file__)))
+
+
+def run(_: list()) -> bool:
+    c = Challenge(2020)
+    c.run()
+    see_results = True
+    only_last = False
+    if see_results:
+        with open(os.path.join(__location__, f"results_{c.year}.csv"), 'r', encoding="utf-8") as f:
+            data = f.readlines()
+            reader = csv.DictReader(data, fieldnames=c.headers)
+            if not only_last:
+                next(reader, None)
+                for row in reader:
+                    print(row)
+            else:
+                *_, last = reader
+                print(last)
+    print(f"run done! total time: {c.total_ms:.3f}ms")
+    return False
 
 
 class Challenge:
-    def __init__(self):
+    def __init__(self, year: int):
+        self.year = year
         self.days = [
             Day1(),
             Day2(),
@@ -19,27 +41,111 @@ class Challenge:
             Day6(),
             Day7(),
             Day8(),
+            Day9(),
+            Day10(),
         ]
         self.total_ms = 0
+        self.headers = ["day", "total_time",
+                        "result1", "time1", "result2", "time2"]
 
     def timedCall(self, callback) -> tuple():
         tick = time.perf_counter() * 1000
         retVal = callback()
         tock = time.perf_counter() * 1000
 
-        return (retVal, f"{tock-tick:.3f}")
+        return (retVal, tock-tick)
 
-    def run(self) -> Generator[str, None, None]:
-        for d in self.days:
-            res1, time1 = self.timedCall(d.part1)
-            res2, time2 = self.timedCall(d.part2)
-            self.total_ms += float(time1) + float(time2)
-            yield f"{d.name}: part1[{time1}ms]({res1}) | part2[{time2}ms]({res2})"
+    def do_tasks(self) -> Generator[tuple, None, None]:
+        for day in self.days:
+            res1, time1 = self.timedCall(day.part1)
+            res2, time2 = self.timedCall(day.part2)
+            total_ms = time1 + time2
+            self.total_ms += total_ms
+            yield (day.name, f"{total_ms:.3f}", res1, f"{time1:.3f}", res2, f"{time2:.3f}")
+
+    def run(self) -> None:
+        with open(os.path.join(__location__, f"results_{self.year}.csv"), 'w', encoding="utf-8", newline='') as f:
+            writer = csv.DictWriter(f, self.headers)
+            writer.writeheader()
+            for row in self.do_tasks():
+                writer.writerow(dict(zip(self.headers, [*row])))
+
+
+class Day10(BaseDay):
+    def __init__(self):
+        super(Day10, self).__init__(day_number=10)
+        self.input = [int(line) for line in self.input]
+        self.in_range = [1, 2, 3]
+        self.adapters = [0] + sorted([line for line in self.input]) + \
+            [max(self.input) + 3]
+
+    def calc_diffs(self, arr, idx) -> int:
+        for num in arr:
+            diff = num - self.adapters[idx]
+            if diff in self.in_range:
+                return diff
+
+    def part1(self) -> int:
+        chain = []
+        for i in range(len(self.adapters) - 1):
+            sub = self.adapters[i:i+3]
+            chain.append(self.calc_diffs(sub, i))
+
+        return chain.count(1) * chain.count(3)
+
+    def detailed_diffs(self, arr, idx) -> tuple:
+        for i in range(len(arr)):
+            diff = arr[i] - self.adapters[idx]
+            if diff in self.in_range:
+                yield (i, diff)
+
+    def part2(self) -> int:
+        chain = []
+        for i in range(len(self.adapters) - 1):
+            sub = self.adapters[i:i+3]
+            available = self.detailed_diffs(sub, i)
+            chain.append(next(available)[1])
+
+        return chain.count(1) * chain.count(3)
+
+
+class Day9(BaseDay):
+    def __init__(self):
+        super(Day9, self).__init__(day_number=9)
+        self.numbers = [int(line) for line in self.input]
+
+    def check_sums(self, partial: list, num: int):
+        for i in range(len(partial)):
+            for j in range(len(partial)):
+                if i == j:
+                    continue
+                if partial[i] + partial[j] == num:
+                    return num
+        return -1
+
+    def part1(self) -> int:
+        preamble = 25
+        for i in range(preamble, len(self.numbers)):
+            partial = self.numbers[i-preamble:i]
+            current = self.numbers[i]
+            if self.check_sums(partial, current) == -1:
+                return current
+
+    def part2(self) -> int:
+        num = self.part1()
+        for i in range(len(self.numbers)):
+            for j in range(i+1, len(self.numbers[i:])):
+                partial = self.numbers[i:j]
+                temp_sum = sum(partial)
+                if temp_sum > num:
+                    break
+                elif temp_sum == num:
+                    return min(partial) + max(partial)
 
 
 class Day8(BaseDay):
-    def __init__(self, read_file=True):
-        super(Day8, self).__init__(day_number=8, read_file=read_file)
+    def __init__(self):
+        super(Day8, self).__init__(day_number=8)
         self.code = [dict(zip(["cmd", "val"], line.split(' ')))
                      for line in self.input]
 
@@ -84,8 +190,8 @@ class Day8(BaseDay):
 
 
 class Day7(BaseDay):
-    def __init__(self, read_file=True):
-        super(Day7, self).__init__(day_number=7, read_file=read_file)
+    def __init__(self):
+        super(Day7, self).__init__(day_number=7)
         key_rgx = re.compile(r"[a-z]+\s[a-z]+")
         val_rgx = re.compile(r"(\d+)\s([a-z]+\s[a-z]+)")
         self.bag_map = {}
@@ -95,7 +201,7 @@ class Day7(BaseDay):
                                  for m in val_rgx.findall(line)]
         self.my_bag = "shiny gold"
 
-    def contains_one(self, key) -> bool:
+    def contains_one(self, key: str) -> bool:
         if len(self.bag_map[key]) == 0:
             return False
         colors = [line["color"] for line in self.bag_map[key]]
@@ -115,7 +221,7 @@ class Day7(BaseDay):
                 count += 1
         return count
 
-    def count_bags(self, key) -> int:
+    def count_bags(self, key: str) -> int:
         count = 0
         if len(self.bag_map[key]) == 0:
             return count
@@ -132,8 +238,8 @@ class Day7(BaseDay):
 
 
 class Day6(BaseDay):
-    def __init__(self, read_file=True):
-        super(Day6, self).__init__(day_number=6, read_file=read_file)
+    def __init__(self):
+        super(Day6, self).__init__(day_number=6)
         self.groups = (" ".join(self.input)).split("  ")
 
     def part1(self) -> int:
@@ -153,10 +259,10 @@ class Day6(BaseDay):
 
 
 class Day5(BaseDay):
-    def __init__(self, read_file=True):
-        super(Day5, self).__init__(day_number=5, read_file=read_file)
+    def __init__(self):
+        super(Day5, self).__init__(day_number=5)
         self.binary = ["".join(["0" if char in ["F", "L"]
-                               else "1" for char in line]) for line in self.input]
+                                else "1" for char in line]) for line in self.input]
 
     def get_seat_id(self, code):
         row = int(code[: 7], 2)
@@ -181,8 +287,8 @@ class Day5(BaseDay):
 
 
 class Day4(BaseDay):
-    def __init__(self, read_file=True):
-        super(Day4, self).__init__(day_number=4, read_file=read_file)
+    def __init__(self):
+        super(Day4, self).__init__(day_number=4)
         self.lines = (" ".join(self.input)).split("  ")
 
     def part1(self) -> int:
@@ -223,8 +329,8 @@ class Day4(BaseDay):
 
 
 class Day3(BaseDay):
-    def __init__(self, read_file=True):
-        super(Day3, self).__init__(day_number=3, read_file=read_file)
+    def __init__(self):
+        super(Day3, self).__init__(day_number=3)
         self.height = len(self.input)
         self.width = len(self.input[0])
 
@@ -242,8 +348,8 @@ class Day3(BaseDay):
 
 
 class Day2(BaseDay):
-    def __init__(self, read_file=True):
-        super(Day2, self).__init__(day_number=2, read_file=read_file)
+    def __init__(self):
+        super(Day2, self).__init__(day_number=2)
         rgx = re.compile(r"^(\d+)-(\d+)\s(\w):\s(\w+)$",
                          flags=re.MULTILINE | re.IGNORECASE)
         self.lines = [rgx.split(x)[1:-1] for x in self.input]
@@ -274,8 +380,8 @@ class Day2(BaseDay):
 
 
 class Day1(BaseDay):
-    def __init__(self, read_file=True):
-        super(Day1, self).__init__(day_number=1, read_file=read_file)
+    def __init__(self):
+        super(Day1, self).__init__(day_number=1)
         self.nums = [int(x) for x in self.input]
         self.set_nums = set(self.nums)
 
@@ -289,15 +395,6 @@ class Day1(BaseDay):
             for num2 in self.nums:
                 if (2020 - num - num2) in self.set_nums:
                     return num * (2020 - num - num2) * num2
-
-
-def run(_: list()) -> bool:
-    c = Challenge()
-    for y in c.run():
-        print(y)
-    print(f"run done! total time: {c.total_ms:.3f}ms")
-
-    return False
 
 
 if __name__ == "__main__":

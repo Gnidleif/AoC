@@ -6,11 +6,10 @@ __location__ = os.path.realpath(os.path.join(
 
 
 class BaseDay:
-    def __init__(self, day_number: int, read_file: bool):
+    def __init__(self, day_number: int):
         self.input = []
         self.name = f"day{day_number}"
-        if read_file == True:
-            self.input = self.read_input()
+        self.input = self.read_input()
 
     def read_input(self):
         file_name = f"{self.name}.txt"
