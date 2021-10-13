@@ -13,7 +13,7 @@ def run(_: list()) -> bool:
     c = Challenge(2020)
     c.run()
     see_results = True
-    only_last = False
+    only_last = True
     if see_results:
         with open(os.path.join(__location__, f"results_{c.year}.csv"), 'r', encoding="utf-8") as f:
             data = f.readlines()
@@ -93,20 +93,19 @@ class Day10(BaseDay):
 
         return chain.count(1) * chain.count(3)
 
-    def detailed_diffs(self, arr, idx) -> tuple:
-        for i in range(len(arr)):
-            diff = arr[i] - self.adapters[idx]
-            if diff in self.in_range:
-                yield (i, diff)
-
     def part2(self) -> int:
-        chain = []
-        for i in range(len(self.adapters) - 1):
-            sub = self.adapters[i:i+3]
-            available = self.detailed_diffs(sub, i)
-            chain.append(next(available)[1])
+        sol = {0: 1}
+        for i in range(1, len(self.adapters)):
+            line = self.adapters[i]
+            sol[line] = 0
+            if line - 1 in sol:
+                sol[line] += sol[line-1]
+            if line - 2 in sol:
+                sol[line] += sol[line-2]
+            if line - 3 in sol:
+                sol[line] += sol[line-3]
 
-        return chain.count(1) * chain.count(3)
+        return sol[max(self.adapters)]
 
 
 class Day9(BaseDay):
