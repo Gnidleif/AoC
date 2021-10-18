@@ -43,6 +43,7 @@ class Challenge:
             Day8(),
             Day9(),
             Day10(),
+            Day11(),
         ]
         self.total_ms = 0
         self.headers = ["day", "total_time",
@@ -70,14 +71,97 @@ class Challenge:
             for row in self.do_tasks():
                 writer.writerow(dict(zip(self.headers, [*row])))
 
+class Day11(BaseDay):
+    def __init__(self):
+        super(Day11, self).__init__(day_number=11)
+        self.chars = [[c for c in line] for line in self.input]
+        self.height = len(self.chars)
+        self.width = len(self.chars[0])
+
+    def calc_modifiers(self, length) -> list:
+        original = [
+            (-1, -1), 
+            (-1, 0), 
+            (-1, 1),
+            (0, -1),
+            (0, 1),
+            (1, -1), 
+            (1, 0), 
+            (1, 1),
+        ]
+        res = []
+        for iteration in range(1, length + 1):
+            ext = [(coords[0] * iteration, coords[1] * iteration) for coords in original]
+            res.extend(ext)
+        return res
+
+    def calc_adjacent(self, coords, modifiers) -> list:
+        res = []
+        for mod in modifiers:
+            adj = (coords[0] + mod[0], coords[1] + mod[1])
+            if adj[0] < 0 or adj[1] < 0 or adj[0] >= self.height or adj[1] >= self.width:
+                continue
+            res.append(adj)
+        return res
+
+    def calc_seats(self, adj_map, tolerance):
+        chars = [[c for c in line] for line in self.chars]
+        valid_count = [0, tolerance]
+        equal = False
+        while not equal:
+            current = [[c for c in line] for line in chars]
+            equal = True
+            for row in range(self.height):
+                for col in range(self.width):
+                    count = 0
+                    for adj in adj_map[(row, col)]:
+                        if chars[adj[0]][adj[1]] == "#":
+                            count += 1
+
+                    if count not in valid_count:
+                        continue
+                    elif chars[row][col] == 'L' and count == 0:
+                        current[row][col] = '#'
+                    elif chars[row][col] == '#' and count == tolerance:
+                        current[row][col] = 'L'
+
+                str_chr = "".join(chars[row])
+                str_cur = "".join(current[row])
+                print(str_chr, str_cur)
+                if str_chr != str_cur:
+                    equal = False
+
+            print("\n")
+            chars = current
+
+        occupied = [[1 if c == "#" else 0 for c in line] for line in chars]
+        return sum([line.count(1) for line in occupied])
+
+    def part1(self) -> int:
+        adj_map = {}
+        mods = self.calc_modifiers(1)
+        for i in range(self.height):
+            for j in range(self.width):
+                coords = (i, j)
+                adj_map[coords] = self.calc_adjacent(coords, mods)
+        return self.calc_seats(adj_map, 4)
+
+    def part2(self) -> int:
+        return
+        adj_map = {}
+        mods = self.calc_modifiers(self.height)
+        for i in range(self.height):
+            for j in range(self.width):
+                coords = (i, j)
+                adj_map[coords] = self.calc_adjacent(coords, mods)
+        return self.calc_seats(adj_map, 5)
 
 class Day10(BaseDay):
     def __init__(self):
         super(Day10, self).__init__(day_number=10)
         self.input = [int(line) for line in self.input]
         self.in_range = [1, 2, 3]
-        self.adapters = [0] + sorted([line for line in self.input]) + \
-            [max(self.input) + 3]
+        self.adapters = [0] + sorted([line for line in self.input]) + [max(self.input) + 3]
 
     def calc_diffs(self, arr, idx) -> int:
         for num in arr:
@@ -226,8 +310,7 @@ class Day7(BaseDay):
             return count
 
         for bag in self.bag_map[key]:
-            count += bag["amount"] + \
-                self.count_bags(bag["color"]) * bag["amount"]
+            count += bag["amount"] + self.count_bags(bag["color"]) * bag["amount"]
 
         return count
 
